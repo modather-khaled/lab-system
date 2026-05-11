@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة التحكم - معامل باب اللوق وأكتوبر</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/recharts@2.12.7/umd/Recharts.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --bg2: #0d1428;
+    --card: rgba(255,255,255,0.05);
+    --card-border: rgba(255,255,255,0.08);
+    --primary: #00b4d8;
+    --primary2: #0077b6;
+    --accent: #48cae4;
+    --success: #2dc653;
+    --warning: #f4a261;
+    --danger: #e63946;
+    --text: #e8f4fd;
+    --muted: #8baabf;
+    --shadow: 0 8px 32px rgba(0,180,216,0.1);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ===== LOGIN PAGE ===== */
+  .login-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at 20% 50%, rgba(0,119,182,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 20%, rgba(0,180,216,0.1) 0%, transparent 50%),
+                var(--bg);
+    padding: 20px;
+  }
+
+  .login-box {
+    background: rgba(255,255,255,0.04);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0,180,216,0.2);
+    border-radius: 24px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(0,180,216,0.05);
+    animation: fadeUp 0.5s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .login-logo {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .login-logo .icon {
+    font-size: 52px;
+    display: block;
+    margin-bottom: 12px;
+    filter: drop-shadow(0 0 20px rgba(0,180,216,0.5));
+  }
+
+  .login-logo h1 {
+    font-size: 22px;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .login-logo p { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .login-field { margin-bottom: 18px; }
+  .login-field label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+
+  .login-field input {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1.5px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 13px 16px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .login-field input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,180,216,0.1);
+  }
+
+  .login-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--primary2), var(--primary));
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 20px rgba(0,180,216,0.3);
+  }
+
+  .login-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,180,216,0.4); }
+  .login-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .login-error {
+    background: rgba(230,57,70,0.1);
+    border: 1px solid rgba(230,57,70,0.3);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #ff6b6b;
+    margin-top: 14px;
+    display: none;
+  }
+
+  /* ===== DASHBOARD ===== */
+  .dashboard { display: none; }
+
+  .sidebar {
+    position: fixed;
+    right: 0; top: 0; bottom: 0;
+    width: 240px;
+    background: rgba(13,20,40,0.95);
+    backdrop-filter: blur(20px);
+    border-left: 1px solid var(--card-border);
+    z-index: 100;
+    padding: 24px 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-logo {
+    padding: 0 20px 24px;
+    border-bottom: 1px solid var(--card-border);
+    margin-bottom: 16px;
+  }
+
+  .sidebar-logo .icon { font-size: 28px; }
+  .sidebar-logo h2 {
+    font-size: 14px; font-weight: 700;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-top: 6px;
+  }
+  .sidebar-logo p { font-size: 11px; color: var(--muted); }
+
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 20px;
+    cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    color: var(--muted);
+    transition: all 0.2s;
+    border-right: 3px solid transparent;
+    margin: 1px 0;
+  }
+
+  .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+  .nav-item.active { color: var(--primary); border-right-color: var(--primary); background: rgba(0,180,216,0.06); }
+  .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .nav-logout {
+    margin-top: auto;
+    padding: 0 12px;
+  }
+
+  .logout-btn {
+    width: 100%;
+    background: rgba(230,57,70,0.1);
+    border: 1px solid rgba(230,57,70,0.2);
+    border-radius: 10px;
+    padding: 10px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: #ff6b6b;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all 0.2s;
+  }
+
+  .logout-btn:hover { background: rgba(230,57,70,0.2); }
+
+  .main-content {
+    margin-right: 240px;
+    min-height: 100vh;
+    background: radial-gradient(ellipse at 10% 20%, rgba(0,119,182,0.08) 0%, transparent 50%),
+                var(--bg);
+  }
+
+  .top-header {
+    background: rgba(13,20,40,0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--card-border);
+    padding: 16px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 50;
+  }
+
+  .page-title { font-size: 18px; font-weight: 900; }
+  .page-title span { color: var(--primary); }
+
+  .filter-pills {
+    display: flex; gap: 6px;
+  }
+
+  .pill {
+    padding: 7px 16px;
+    border-radius: 20px;
+    border: 1px solid var(--card-border);
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Cairo', sans-serif;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .pill.active {
+    background: rgba(0,180,216,0.15);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+
+  .content-area { padding: 24px 28px; }
+
+  /* SECTION */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* STATS GRID */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .stat-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--card-accent, linear-gradient(90deg, var(--primary), var(--accent)));
+  }
+
+  .stat-card-icon {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin-bottom: 14px;
+  }
+
+  .stat-card-num { font-size: 32px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+  .stat-card-label { font-size: 13px; color: var(--muted); font-weight: 600; }
+
+  .stat-card-trend {
+    position: absolute;
+    top: 16px; left: 16px;
+    font-size: 11px; font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  /* CHARTS */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 22px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .chart-card.full { grid-column: 1 / -1; }
+
+  .chart-title {
+    font-size: 14px; font-weight: 700;
+    color: var(--text); margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .chart-title span { color: var(--primary); }
+
+  /* BRANCH CARDS */
+  .branch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .branch-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 24px;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .branch-name {
+    font-size: 16px; font-weight: 900;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .branch-stat {
+    display: flex; justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--card-border);
+    font-size: 13px;
+  }
+
+  .branch-stat:last-child { border-bottom: none; }
+  .branch-stat label { color: var(--muted); }
+  .branch-stat .val { font-weight: 700; }
+
+  /* DOCTORS TABLE */
+  .doctors-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .doctors-table th {
+    padding: 12px 16px;
+    text-align: right;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 12px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .doctors-table td {
+    padding: 13px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .doctors-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .rank-badge {
+    width: 26px; height: 26px;
+    border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 900;
+  }
+
+  /* ACTIVITY */
+  .activity-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .activity-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    transition: background 0.2s;
+  }
+
+  .activity-item:hover { background: rgba(255,255,255,0.04); }
+
+  .activity-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%; flex-shrink: 0;
+  }
+
+  .activity-text { flex: 1; font-size: 13px; }
+  .activity-text strong { color: var(--primary); }
+  .activity-time { font-size: 11px; color: var(--muted); }
+
+  /* PIE CHART custom */
+  .pie-container {
+    display: flex; align-items: center; justify-content: center; gap: 32px;
+  }
+
+  .pie-legend { display: flex; flex-direction: column; gap: 12px; }
+  .pie-legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+  .pie-dot { width: 12px; height: 12px; border-radius: 3px; }
+
+  /* FINANCIAL */
+  .financial-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .fin-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 22px;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  .fin-label { font-size: 12px; color: var(--muted); font-weight: 600; margin-bottom: 8px; }
+  .fin-val { font-size: 26px; font-weight: 900; }
+
+  /* BAR CHART manual */
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 140px; padding-top: 10px; }
+  .bar-group { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; }
+  .bar-wrap { display: flex; gap: 3px; align-items: flex-end; width: 100%; justify-content: center; }
+  .bar {
+    width: 18px; border-radius: 4px 4px 0 0;
+    transition: height 0.5s ease;
+    min-height: 4px;
+  }
+  .bar-label { font-size: 10px; color: var(--muted); text-align: center; }
+
+  /* LINE CHART manual */
+  .line-chart-wrap { position: relative; height: 140px; }
+
+  /* LOADING */
+  .loading-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 999; gap: 16px;
+  }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid rgba(0,180,216,0.2);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .glow { color: var(--primary); font-size: 14px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    .sidebar { width: 200px; }
+    .main-content { margin-right: 200px; }
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .branch-grid { grid-template-columns: 1fr; }
+    .financial-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 640px) {
+    .sidebar { display: none; }
+    .main-content { margin-right: 0; }
+    .stats-grid { grid-template-columns: 1fr; }
+    .financial-grid { grid-template-columns: 1fr; }
+  }
+
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+  }
+  .badge-blue { background: rgba(0,180,216,0.15); color: var(--primary); }
+  .badge-green { background: rgba(45,198,83,0.15); color: var(--success); }
+  .badge-orange { background: rgba(244,162,97,0.15); color: var(--warning); }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div style="font-size:40px;filter:drop-shadow(0 0 20px rgba(0,180,216,0.5))">🔬</div>
+  <div class="spinner"></div>
+  <div class="glow">جاري التحميل...</div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div class="login-page" id="login-page" style="display:none">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="icon">🔬</span>
+      <h1>لوحة التحكم</h1>
+      <p>معامل باب اللوق & أكتوبر</p>
+    </div>
+
+    <div class="login-field">
+      <label>البريد الإلكتروني</label>
+      <input type="email" id="login-email" placeholder="admin@lab.com" autocomplete="email">
+    </div>
+
+    <div class="login-field">
+      <label>كلمة المرور</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+
+    <button class="login-btn" id="login-btn" onclick="doLogin()">🔐 تسجيل الدخول</button>
+    <div class="login-error" id="login-error">بيانات الدخول غير صحيحة</div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="icon">🔬</div>
+      <h2>لوحة التحكم</h2>
+      <p>باب اللوق & أكتوبر</p>
+    </div>
+
+    <div class="nav-item active" onclick="showSection('overview', this)">
+      <span class="nav-icon">📊</span> الرئيسية
+    </div>
+    <div class="nav-item" onclick="showSection('financial', this)">
+      <span class="nav-icon">💰</span> المالية
+    </div>
+    <div class="nav-item" onclick="showSection('branches', this)">
+      <span class="nav-icon">🏥</span> الفروع
+    </div>
+    <div class="nav-item" onclick="showSection('doctors', this)">
+      <span class="nav-icon">👨‍⚕️</span> الأطباء
+    </div>
+    <div class="nav-item" onclick="showSection('activity', this)">
+      <span class="nav-icon">🕐</span> النشاط الأخير
+    </div>
+
+    <div class="nav-logout">
+      <button class="logout-btn" onclick="doLogout()">🚪 تسجيل الخروج</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- HEADER -->
+    <div class="top-header">
+      <div class="page-title">لوحة <span>التحكم</span></div>
+      <div class="filter-pills">
+        <button class="pill active" onclick="setDateFilter('today', this)">اليوم</button>
+        <button class="pill" onclick="setDateFilter('week', this)">الأسبوع</button>
+        <button class="pill" onclick="setDateFilter('month', this)">الشهر</button>
+        <button class="pill" onclick="setDateFilter('year', this)">السنة</button>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      <!-- OVERVIEW SECTION -->
+      <div class="section active" id="section-overview">
+
+        <!-- STATS CARDS -->
+        <div class="stats-grid" id="stats-grid">
+          <div class="stat-card" style="--card-accent: linear-gradient(90deg, #00b4d8, #48cae4); animation-delay:0.0s">
+            <div class="stat-card-icon" style="background:rgba(0,180,216,0.15)">🧪</div>
+            <div class="stat-card-num" id="s-total" style="color:#00b4d8">—</div>
+            <div class="stat-card-label">إجمالي العينات</div>
+          </div>
+          <div class="stat-card" style="--card-accent: linear-gradient(90deg, #f4a261, #e76f51); animation-delay:0.1s">
+            <div class="stat-card-icon" style="background:rgba(244,162,97,0.15)">⚙️</div>
+            <div class="stat-card-num" id="s-processing" style="color:#f4a261">—</div>
+            <div class="stat-card-label">جاري العمل</div>
+          </div>
+          <div class="stat-card" style="--card-accent: linear-gradient(90deg, #2dc653, #52b788); animation-delay:0.2s">
+            <div class="stat-card-icon" style="background:rgba(45,198,83,0.15)">✅</div>
+            <div class="stat-card-num" id="s-done" style="color:#2dc653">—</div>
+            <div class="stat-card-label">تم الانتهاء</div>
+          </div>
+          <div class="stat-card" style="--card-accent: linear-gradient(90deg, #00b4d8, #0077b6); animation-delay:0.3s">
+            <div class="stat-card-icon" style="background:rgba(0,180,216,0.15)">💵</div>
+            <div class="stat-card-num" id="s-revenue" style="color:#00b4d8">—</div>
+            <div class="stat-card-label">إجمالي الأرباح (ج)</div>
+          </div>
+          <div class="stat-card" style="--card-accent: linear-gradient(90deg, #e63946, #c1121f); animation-delay:0.4s">
+            <div class="stat-card-icon" style="background:rgba(230,57,70,0.15)">⏳</div>
+            <div class="stat-card-num" id="s-due" style="color:#e63946">—</div>
+            <div class="stat-card-label">المبالغ المتبقية (ج)</div>
+          </div>
+          <div class="stat-card" style="--card-accent: linear-gradient(90deg, #7b2fbe, #9d4edd); animation-delay:0.5s">
+            <div class="stat-card-icon" style="background:rgba(123,47,190,0.15)">📅</div>
+            <div class="stat-card-num" id="s-today" style="color:#9d4edd">—</div>
+            <div class="stat-card-label">حالات اليوم</div>
+          </div>
+        </div>
+
+        <!-- CHARTS -->
+        <div class="charts-grid">
+
+          <!-- Last 7 days -->
+          <div class="chart-card">
+            <div class="chart-title">📈 العينات <span>آخر 7 أيام</span></div>
+            <div id="chart-7days"></div>
+          </div>
+
+          <!-- Pie -->
+          <div class="chart-card">
+            <div class="chart-title">🔵 نسبة <span>حالات العينات</span></div>
+            <div class="pie-container" id="chart-pie"></div>
+          </div>
+
+          <!-- Branch comparison -->
+          <div class="chart-card full">
+            <div class="chart-title">🏥 مقارنة <span>الفروع</span></div>
+            <div id="chart-branches"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- FINANCIAL SECTION -->
+      <div class="section" id="section-financial">
+        <div class="financial-grid">
+          <div class="fin-card">
+            <div class="fin-label">💵 إجمالي المطلوب</div>
+            <div class="fin-val" id="f-total" style="color:#00b4d8">—</div>
+          </div>
+          <div class="fin-card">
+            <div class="fin-label">✅ إجمالي المدفوع</div>
+            <div class="fin-val" id="f-paid" style="color:#2dc653">—</div>
+          </div>
+          <div class="fin-card">
+            <div class="fin-label">⏳ إجمالي المتبقي</div>
+            <div class="fin-val" id="f-due" style="color:#e63946">—</div>
+          </div>
+          <div class="fin-card">
+            <div class="fin-label">📅 متوسط الربح اليومي</div>
+            <div class="fin-val" id="f-avg" style="color:#f4a261">—</div>
+          </div>
+          <div class="fin-card">
+            <div class="fin-label">📆 أرباح هذا الشهر</div>
+            <div class="fin-val" id="f-month" style="color:#9d4edd">—</div>
+          </div>
+          <div class="fin-card">
+            <div class="fin-label">🏆 أعلى يوم دخل</div>
+            <div class="fin-val" id="f-best" style="color:#00b4d8;font-size:18px">—</div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title">💰 الأرباح <span>الشهرية</span></div>
+          <div id="chart-monthly"></div>
+        </div>
+      </div>
+
+      <!-- BRANCHES SECTION -->
+      <div class="section" id="section-branches">
+        <div class="branch-grid" id="branch-grid"></div>
+      </div>
+
+      <!-- DOCTORS SECTION -->
+      <div class="section" id="section-doctors">
+        <div class="chart-card">
+          <div class="chart-title">👨‍⚕️ <span>أكثر الأطباء</span> إرسالاً للحالات</div>
+          <table class="doctors-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>اسم الطبيب</th>
+                <th>عدد الحالات</th>
+                <th>النسبة</th>
+              </tr>
+            </thead>
+            <tbody id="doctors-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ACTIVITY SECTION -->
+      <div class="section" id="section-activity">
+        <div class="chart-card">
+          <div class="chart-title">🕐 <span>آخر النشاطات</span></div>
+          <div class="activity-list" id="activity-list"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://sezojsvdtpckiuyqnlyj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlem9qc3ZkdHBja2l1eXFubHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MjM0NzAsImV4cCI6MjA5Mzk5OTQ3MH0.NlMcysB_y74qC9LcstbesU29cyK-d-yiLqLJgJsRB40';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let allSamples = [];
+let dateFilter = 'today';
+
+// ===== AUTH =====
+async function checkAuth() {
+  const { data: { session } } = await db.auth.getSession();
+  document.getElementById('loading').style.display = 'none';
+  if (session) {
+    showDashboard();
+  } else {
+    document.getElementById('login-page').style.display = 'flex';
+  }
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const btn   = document.getElementById('login-btn');
+  const err   = document.getElementById('login-error');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الدخول...';
+  err.style.display = 'none';
+
+  const { error } = await db.auth.signInWithPassword({ email, password: pass });
+
+  if (error) {
+    err.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '🔐 تسجيل الدخول';
+  } else {
+    document.getElementById('login-page').style.display = 'none';
+    showDashboard();
+  }
+}
+
+async function doLogout() {
+  await db.auth.signOut();
+  location.reload();
+}
+
+function showDashboard() {
+  document.getElementById('dashboard').style.display = 'block';
+  loadData();
+}
+
+// ===== LOAD DATA =====
+async function loadData() {
+  const { data } = await db.from('samples').select('*').order('created_at', { ascending: false });
+  allSamples = data || [];
+  renderAll();
+}
+
+// ===== DATE FILTER =====
+function setDateFilter(f, el) {
+  dateFilter = f;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderAll();
+}
+
+function getFiltered() {
+  const now = new Date();
+  return allSamples.filter(s => {
+    const d = new Date(s.created_at || s.date);
+    if (dateFilter === 'today') return d.toDateString() === now.toDateString();
+    if (dateFilter === 'week') return (now - d) <= 7 * 86400000;
+    if (dateFilter === 'month') return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    if (dateFilter === 'year') return d.getFullYear() === now.getFullYear();
+    return true;
+  });
+}
+
+// ===== RENDER ALL =====
+function renderAll() {
+  const samples = getFiltered();
+  renderStats(samples);
+  renderCharts(samples);
+  renderBranches(samples);
+  renderDoctors(samples);
+  renderActivity();
+  renderFinancial(samples);
+}
+
+// ===== STATS =====
+function renderStats(samples) {
+  const today = new Date().toDateString();
+  document.getElementById('s-total').textContent = samples.length;
+  document.getElementById('s-processing').textContent = samples.filter(s => s.status !== 'ready').length;
+  document.getElementById('s-done').textContent = samples.filter(s => s.status === 'ready').length;
+  document.getElementById('s-revenue').textContent = samples.reduce((a, s) => a + (s.paid || 0), 0).toLocaleString('ar-EG');
+  document.getElementById('s-due').textContent = samples.reduce((a, s) => a + (s.remaining || 0), 0).toLocaleString('ar-EG');
+  document.getElementById('s-today').textContent = allSamples.filter(s => new Date(s.created_at || s.date).toDateString() === today).length;
+}
+
+// ===== CHARTS =====
+function renderCharts(samples) {
+  render7DaysChart(samples);
+  renderPieChart(samples);
+  renderBranchChart(samples);
+}
+
+function render7DaysChart(samples) {
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const label = d.toLocaleDateString('ar-EG', { weekday: 'short' });
+    const count = samples.filter(s => new Date(s.created_at || s.date).toDateString() === d.toDateString()).length;
+    days.push({ label, count });
+  }
+
+  const max = Math.max(...days.map(d => d.count), 1);
+  const h = 120;
+
+  const bars = days.map(d => {
+    const height = Math.round((d.count / max) * h);
+    return `<div class="bar-group">
+      <div class="bar-wrap">
+        <div class="bar" style="height:${height}px;background:linear-gradient(180deg,#00b4d8,#0077b6)"></div>
+      </div>
+      <div class="bar-label">${d.label}</div>
+      <div class="bar-label" style="color:#00b4d8;font-weight:700">${d.count}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('chart-7days').innerHTML = `<div class="bar-chart">${bars}</div>`;
+}
+
+function renderPieChart(samples) {
+  const processing = samples.filter(s => s.status !== 'ready').length;
+  const done = samples.filter(s => s.status === 'ready').length;
+  const total = processing + done || 1;
+  const pct1 = Math.round((processing / total) * 100);
+  const pct2 = 100 - pct1;
+
+  const r = 50, cx = 60, cy = 60;
+  const c = 2 * Math.PI * r;
+  const dash1 = (pct1 / 100) * c;
+  const dash2 = (pct2 / 100) * c;
+
+  document.getElementById('chart-pie').innerHTML = `
+    <svg width="120" height="120" viewBox="0 0 120 120">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="18"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#f4a261" stroke-width="18"
+        stroke-dasharray="${dash1} ${c - dash1}" stroke-dashoffset="${c * 0.25}" stroke-linecap="round"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#2dc653" stroke-width="18"
+        stroke-dasharray="${dash2} ${c - dash2}" stroke-dashoffset="${c * 0.25 - dash1}" stroke-linecap="round"/>
+      <text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" fill="white" font-size="14" font-weight="900" font-family="Cairo">${total}</text>
+      <text x="${cx}" y="${cy + 16}" text-anchor="middle" fill="#8baabf" font-size="9" font-family="Cairo">عينة</text>
+    </svg>
+    <div class="pie-legend">
+      <div class="pie-legend-item"><div class="pie-dot" style="background:#f4a261"></div><span>جاري العمل: ${processing} (${pct1}%)</span></div>
+      <div class="pie-legend-item"><div class="pie-dot" style="background:#2dc653"></div><span>منتهية: ${done} (${pct2}%)</span></div>
+    </div>`;
+}
+
+function renderBranchChart(samples) {
+  const bab = samples.filter(s => s.lab === 'bab');
+  const oct = samples.filter(s => s.lab === 'october');
+  const max = Math.max(bab.length, oct.length, 1);
+  const h = 120;
+
+  const metrics = [
+    { label: 'إجمالي العينات', bab: bab.length, oct: oct.length },
+    { label: 'منتهية', bab: bab.filter(s=>s.status==='ready').length, oct: oct.filter(s=>s.status==='ready').length },
+    { label: 'الأرباح (ج)', bab: bab.reduce((a,s)=>a+(s.paid||0),0), oct: oct.reduce((a,s)=>a+(s.paid||0),0) },
+  ];
+
+  const maxVal = Math.max(...metrics.map(m => Math.max(m.bab, m.oct)), 1);
+
+  const bars = metrics.map(m => {
+    const h1 = Math.round((m.bab / maxVal) * h);
+    const h2 = Math.round((m.oct / maxVal) * h);
+    return `<div class="bar-group" style="flex:1">
+      <div class="bar-wrap">
+        <div class="bar" style="height:${h1}px;background:linear-gradient(180deg,#00b4d8,#0077b6);width:22px"></div>
+        <div class="bar" style="height:${h2}px;background:linear-gradient(180deg,#2dc653,#1a9e3f);width:22px"></div>
+      </div>
+      <div class="bar-label">${m.label}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('chart-branches').innerHTML = `
+    <div style="display:flex;gap:12px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:12px;height:12px;background:#00b4d8;border-radius:3px"></div>باب اللوق</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px"><div style="width:12px;height:12px;background:#2dc653;border-radius:3px"></div>أكتوبر</div>
+    </div>
+    <div class="bar-chart">${bars}</div>`;
+}
+
+// ===== FINANCIAL =====
+function renderFinancial(samples) {
+  const total = samples.reduce((a,s) => a+(s.total||0), 0);
+  const paid  = samples.reduce((a,s) => a+(s.paid||0), 0);
+  const due   = samples.reduce((a,s) => a+(s.remaining||0), 0);
+
+  const dates = [...new Set(samples.map(s => (s.created_at||s.date)?.split('T')[0]))].filter(Boolean);
+  const avg = dates.length ? Math.round(paid / dates.length) : 0;
+
+  const now = new Date();
+  const monthSamples = allSamples.filter(s => {
+    const d = new Date(s.created_at || s.date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthRevenue = monthSamples.reduce((a,s) => a+(s.paid||0), 0);
+
+  // Best day
+  const byDay = {};
+  allSamples.forEach(s => {
+    const day = (s.created_at||s.date)?.split('T')[0];
+    if (day) byDay[day] = (byDay[day] || 0) + (s.paid || 0);
+  });
+  const bestDay = Object.entries(byDay).sort((a,b) => b[1]-a[1])[0];
+
+  document.getElementById('f-total').textContent = total.toLocaleString('ar-EG') + ' ج';
+  document.getElementById('f-paid').textContent  = paid.toLocaleString('ar-EG') + ' ج';
+  document.getElementById('f-due').textContent   = due.toLocaleString('ar-EG') + ' ج';
+  document.getElementById('f-avg').textContent   = avg.toLocaleString('ar-EG') + ' ج';
+  document.getElementById('f-month').textContent = monthRevenue.toLocaleString('ar-EG') + ' ج';
+  document.getElementById('f-best').textContent  = bestDay ? `${bestDay[0]} (${bestDay[1].toLocaleString('ar-EG')} ج)` : '—';
+
+  // Monthly chart
+  const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const label = d.toLocaleDateString('ar-EG', { month: 'short' });
+    const rev = allSamples.filter(s => {
+      const sd = new Date(s.created_at || s.date);
+      return sd.getMonth() === d.getMonth() && sd.getFullYear() === d.getFullYear();
+    }).reduce((a,s) => a+(s.paid||0), 0);
+    months.push({ label, rev });
+  }
+
+  const maxRev = Math.max(...months.map(m => m.rev), 1);
+  const bars = months.map(m => {
+    const height = Math.round((m.rev / maxRev) * 100);
+    return `<div class="bar-group">
+      <div class="bar-wrap">
+        <div class="bar" style="height:${height}px;background:linear-gradient(180deg,#9d4edd,#7b2fbe);width:28px"></div>
+      </div>
+      <div class="bar-label">${m.label}</div>
+      <div class="bar-label" style="color:#9d4edd;font-weight:700;font-size:9px">${m.rev.toLocaleString('ar-EG')}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('chart-monthly').innerHTML = `<div class="bar-chart" style="height:160px">${bars}</div>`;
+}
+
+// ===== BRANCHES =====
+function renderBranches(samples) {
+  const branches = [
+    { key: 'bab', name: 'باب اللوق', color: '#00b4d8' },
+    { key: 'october', name: 'أكتوبر', color: '#2dc653' }
+  ];
+
+  document.getElementById('branch-grid').innerHTML = branches.map(b => {
+    const s = samples.filter(x => x.lab === b.key);
+    const done = s.filter(x => x.status === 'ready').length;
+    const revenue = s.reduce((a,x) => a+(x.paid||0), 0);
+    const due = s.reduce((a,x) => a+(x.remaining||0), 0);
+
+    return `<div class="branch-card">
+      <div class="branch-name" style="color:${b.color}">🏥 ${b.name}</div>
+      <div class="branch-stat"><label>إجمالي العينات</label><span class="val" style="color:${b.color}">${s.length}</span></div>
+      <div class="branch-stat"><label>منتهية</label><span class="val" style="color:#2dc653">${done}</span></div>
+      <div class="branch-stat"><label>جاري العمل</label><span class="val" style="color:#f4a261">${s.length - done}</span></div>
+      <div class="branch-stat"><label>الأرباح المحصلة</label><span class="val" style="color:#2dc653">${revenue.toLocaleString('ar-EG')} ج</span></div>
+      <div class="branch-stat"><label>المبالغ المتبقية</label><span class="val" style="color:#e63946">${due.toLocaleString('ar-EG')} ج</span></div>
+    </div>`;
+  }).join('');
+}
+
+// ===== DOCTORS =====
+function renderDoctors(samples) {
+  const counts = {};
+  samples.forEach(s => {
+    if (s.doctor && s.doctor.trim()) {
+      counts[s.doctor.trim()] = (counts[s.doctor.trim()] || 0) + 1;
+    }
+  });
+
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0, 10);
+  const total = sorted.reduce((a,d) => a+d[1], 0) || 1;
+
+  const colors = ['#ffd700','#c0c0c0','#cd7f32'];
+
+  document.getElementById('doctors-tbody').innerHTML = sorted.length
+    ? sorted.map(([name, count], i) => `
+      <tr>
+        <td><span class="rank-badge" style="background:${colors[i]||'rgba(255,255,255,0.1)'};color:${i<3?'#000':'#fff'}">${i+1}</span></td>
+        <td><strong>${name}</strong></td>
+        <td><span class="badge badge-blue">${count} حالة</span></td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;height:6px;background:rgba(255,255,255,0.08);border-radius:3px">
+              <div style="width:${Math.round((count/sorted[0][1])*100)}%;height:100%;background:linear-gradient(90deg,#00b4d8,#48cae4);border-radius:3px"></div>
+            </div>
+            <span style="font-size:11px;color:#8baabf">${Math.round((count/total)*100)}%</span>
+          </div>
+        </td>
+      </tr>`)
+    .join('')
+    : '<tr><td colspan="4" style="text-align:center;padding:30px;color:#8baabf">لا توجد بيانات</td></tr>';
+}
+
+// ===== ACTIVITY =====
+function renderActivity() {
+  const recent = [...allSamples].slice(0, 15);
+
+  document.getElementById('activity-list').innerHTML = recent.map(s => {
+    const date = new Date(s.created_at || s.date).toLocaleDateString('ar-EG');
+    const isReady = s.status === 'ready';
+    return `<div class="activity-item">
+      <div class="activity-dot" style="background:${isReady ? '#2dc653' : '#f4a261'}"></div>
+      <div class="activity-text">
+        تم ${isReady ? 'إنهاء' : 'تسجيل'} عينة <strong>${s.serial}</strong> - ${s.name}
+        <div style="font-size:11px;color:#8baabf;margin-top:2px">${s.lab === 'bab' ? 'باب اللوق' : 'أكتوبر'} • ${s.type}</div>
+      </div>
+      <div class="activity-time">${date}</div>
+    </div>`;
+  }).join('') || '<div style="text-align:center;padding:30px;color:#8baabf">لا توجد نشاطات</div>';
+}
+
+// ===== NAVIGATION =====
+function showSection(name, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  el.classList.add('active');
+}
+
+// ===== INIT =====
+checkAuth();
+</script>
+</body>
+</html>
