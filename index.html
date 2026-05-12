@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام إدارة العينات - معامل باب اللوق وأكتوبر</title>
+<meta name="theme-color" content="#0a3d62">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="معامل">
+<link rel="manifest" href="data:application/json;charset=utf-8,%7B%22name%22%3A%22%D9%86%D8%B8%D8%A7%D9%85+%D8%A5%D8%AF%D8%A7%D8%B1%D8%A9+%D8%A7%D9%84%D8%B9%D9%8A%D9%86%D8%A7%D8%AA%22%2C%22short_name%22%3A%22%D9%85%D8%B9%D8%A7%D9%85%D9%84%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230a3d62%22%2C%22theme_color%22%3A%22%230a3d62%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fcdn.jsdelivr.net%2Fnpm%2F%40twemoji%2Fcdn%2F72x72%2F1f9ea.png%22%2C%22sizes%22%3A%2272x72%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --primary: #0a3d62;
+    --accent: #1e88e5;
+    --success: #00897b;
+    --warning: #f57c00;
+    --danger: #c62828;
+    --bg: #f0f4f8;
+    --card: #ffffff;
+    --text: #1a2332;
+    --muted: #6b7c93;
+    --border: #dde3ec;
+    --shadow: 0 4px 24px rgba(10,61,98,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* LOADING SCREEN */
+  .loading-screen {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, var(--primary), #154360);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 999; color: white;
+    gap: 16px;
+  }
+  .loading-screen .logo { font-size: 52px; }
+  .loading-screen h2 { font-size: 20px; font-weight: 700; }
+  .loading-screen p { font-size: 14px; opacity: 0.7; }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-top: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .header {
+    background: linear-gradient(135deg, var(--primary) 0%, #154360 100%);
+    color: white; padding: 0 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 62px;
+    box-shadow: 0 2px 16px rgba(10,61,98,0.3);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-brand { display: flex; align-items: center; gap: 10px; }
+  .header-logo {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header-title { font-size: 16px; font-weight: 700; }
+  .header-sub { font-size: 11px; opacity: 0.7; }
+
+  .lab-switcher {
+    display: flex; gap: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 5px;
+  }
+  .lab-btn {
+    padding: 6px 14px; border-radius: 7px; border: none;
+    cursor: pointer; font-family: 'Cairo', sans-serif;
+    font-size: 12px; font-weight: 600; transition: all 0.25s;
+    color: rgba(255,255,255,0.7); background: transparent;
+  }
+  .lab-btn.active { background: white; color: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+
+  .sync-indicator {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; opacity: 0.8;
+  }
+  .sync-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #4caf50;
+    box-shadow: 0 0 6px #4caf50;
+    animation: pulse 2s infinite;
+  }
+  .sync-dot.offline { background: #f44336; box-shadow: 0 0 6px #f44336; animation: none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .main { padding: 20px 16px; max-width: 1300px; margin: 0 auto; }
+
+  .stats-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card); border-radius: 14px;
+    padding: 18px 20px; box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; gap: 14px;
+  }
+  .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .stat-num { font-size: 30px; font-weight: 900; line-height: 1; }
+  .stat-label { font-size: 13px; color: var(--muted); margin-top: 4px; font-weight: 600; }
+
+  .content-grid {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 20px; align-items: start;
+  }
+
+  .card { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); border: 1px solid var(--border); overflow: hidden; }
+  .card-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, #f8fafc, #f0f4f8);
+  }
+  .card-title { font-size: 14px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 20px; }
+
+  .form-group { margin-bottom: 13px; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+  .form-label span { color: #c62828; }
+  .form-control {
+    width: 100%; padding: 10px 12px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-family: 'Cairo', sans-serif; font-size: 14px;
+    color: var(--text); background: #fafbfc;
+    transition: border-color 0.2s, box-shadow 0.2s; outline: none;
+  }
+  .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,136,229,0.12); background: white; }
+
+  .serial-display {
+    background: linear-gradient(135deg, #e8eaf6, #ede7f6);
+    border: 2px solid #9fa8da; border-radius: 10px;
+    padding: 11px 14px; font-size: 24px; font-weight: 900;
+    color: var(--primary); text-align: center;
+    letter-spacing: 4px; font-family: 'Courier New', monospace;
+  }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .money-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .remaining-display {
+    background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+    border: 1.5px solid #a5d6a7; border-radius: 10px;
+    padding: 10px 12px; font-size: 13px; font-weight: 700;
+    color: var(--success); text-align: center; margin-top: 20px;
+  }
+
+  .lab-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .lab-option {
+    border: 2px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; cursor: pointer; text-align: center;
+    font-family: 'Cairo', sans-serif; font-size: 13px; font-weight: 700;
+    transition: all 0.2s; background: white; color: var(--muted);
+  }
+  .lab-option.sel-bab { border-color: var(--primary); background: #e8eaf6; color: var(--primary); }
+  .lab-option.sel-oct { border-color: var(--success); background: #e0f2f1; color: var(--success); }
+
+  .btn {
+    padding: 11px 20px; border-radius: 10px; border: none;
+    cursor: pointer; font-family: 'Cairo', sans-serif;
+    font-size: 14px; font-weight: 700; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #1565c0);
+    color: white; width: 100%; justify-content: center;
+    font-size: 15px; padding: 13px;
+    box-shadow: 0 4px 12px rgba(30,136,229,0.3);
+  }
+  .btn-primary:hover { transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+  .btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 7px; }
+  .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+  .search-box { position: relative; margin-bottom: 14px; }
+  .search-box input {
+    width: 100%; padding: 11px 16px 11px 44px;
+    border: 1.5px solid var(--border); border-radius: 12px;
+    font-family: 'Cairo', sans-serif; font-size: 14px;
+    background: white; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(30,136,229,0.12); }
+  .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 16px; }
+
+  .filter-tabs { display: flex; gap: 7px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-tab {
+    padding: 6px 14px; border-radius: 8px;
+    border: 1.5px solid var(--border); background: white;
+    cursor: pointer; font-family: 'Cairo', sans-serif;
+    font-size: 12px; font-weight: 600; color: var(--muted); transition: all 0.2s;
+  }
+  .filter-tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: linear-gradient(135deg, var(--primary), #154360); color: white; }
+  thead th { padding: 11px 12px; text-align: right; font-weight: 600; font-size: 12px; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:hover { background: #f0f7ff; }
+  tbody td { padding: 11px 12px; color: var(--text); white-space: nowrap; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-lab1 { background: #e8eaf6; color: #283593; }
+  .badge-lab2 { background: #e0f2f1; color: #00695c; }
+
+  .serial-num {
+    font-family: 'Courier New', monospace; font-weight: 700;
+    color: var(--primary); font-size: 16px;
+    background: #e8eaf6; padding: 3px 9px; border-radius: 6px;
+  }
+
+  .status-select {
+    border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 5px 8px; font-family: 'Cairo', sans-serif;
+    font-size: 12px; cursor: pointer; outline: none; background: white;
+  }
+
+  .view-label { font-size: 12px; color: var(--muted); background: #f0f4f8; padding: 3px 10px; border-radius: 6px; font-weight: 600; }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,61,98,0.45); backdrop-filter: blur(4px);
+    z-index: 200; display: none; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: white; border-radius: 20px;
+    width: 100%; max-width: 520px; max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(10,61,98,0.3);
+    animation: modalIn 0.3s ease;
+  }
+  @keyframes modalIn { from{opacity:0;transform:scale(0.95) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+  .modal-header {
+    padding: 20px 24px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, var(--primary), #154360);
+    color: white; border-radius: 20px 20px 0 0;
+  }
+  .modal-title { font-size: 15px; font-weight: 700; }
+  .modal-close { width: 30px; height: 30px; background: rgba(255,255,255,0.2); border: none; border-radius: 7px; cursor: pointer; color: white; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .modal-body { padding: 22px; }
+
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 18px; }
+  .detail-item label { font-size: 11px; color: var(--muted); font-weight: 600; display: block; margin-bottom: 3px; }
+  .detail-item .val { font-size: 14px; font-weight: 600; color: var(--text); }
+
+  .money-summary {
+    background: linear-gradient(135deg, #f0f7ff, #e8f4fd);
+    border: 1px solid #bee3f8; border-radius: 12px;
+    padding: 14px; display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    text-align: center; gap: 8px;
+  }
+  .money-item label { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .money-item .amount { font-size: 18px; font-weight: 900; margin-top: 3px; }
+  .amount-total { color: var(--primary); }
+  .amount-paid { color: var(--success); }
+  .amount-due { color: var(--danger); }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--primary); color: white;
+    padding: 12px 24px; border-radius: 12px;
+    font-size: 14px; font-weight: 600;
+    box-shadow: 0 8px 24px rgba(10,61,98,0.3);
+    z-index: 300; transition: transform 0.3s;
+    max-width: 90vw; text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+  .empty-state .icon { font-size: 44px; margin-bottom: 10px; }
+
+  /* Mobile responsive */
+  @media (max-width: 900px) {
+    .content-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 600px) {
+    .stats-bar { grid-template-columns: 1fr; gap: 10px; }
+    .form-row { grid-template-columns: 1fr; }
+    .money-row { grid-template-columns: 1fr 1fr; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .lab-switcher { gap: 4px; }
+    .lab-btn { padding: 5px 10px; font-size: 11px; }
+    .header { height: 56px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading-screen">
+  <div class="logo">🔬</div>
+  <h2>نظام إدارة العينات</h2>
+  <p>معامل باب اللوق & أكتوبر</p>
+  <div class="spinner"></div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-brand">
+    <div class="header-logo">🔬</div>
+    <div>
+      <div class="header-title">نظام العينات</div>
+      <div class="header-sub">باب اللوق & أكتوبر</div>
+    </div>
+  </div>
+
+  <div class="lab-switcher">
+    <button class="lab-btn active" onclick="switchView('all')" id="btn-all">الكل</button>
+    <button class="lab-btn" onclick="switchView('bab')" id="btn-bab">باب اللوق</button>
+    <button class="lab-btn" onclick="switchView('october')" id="btn-october">أكتوبر</button>
+  </div>
+
+  <div class="sync-indicator">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-text">متصل</span>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- ACTIVE USERS + DASHBOARD -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6b7c93;font-weight:600">
+      <span>👥</span>
+      <span id="active-count">1</span>
+      <span>مستخدم متصل الآن</span>
+    </div>
+    <button onclick="window.location.href='admin-6.html'" style="background:linear-gradient(135deg,#1e88e5,#1565c0);border:none;color:white;padding:8px 18px;border-radius:10px;cursor:pointer;font-family:Cairo,sans-serif;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;box-shadow:0 4px 12px rgba(30,136,229,0.3);transition:all 0.2s" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+      📊 Dashboard
+    </button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#e3f2fd;">🧪</div>
+      <div>
+        <div class="stat-num" id="stat-total" style="color:var(--accent)">—</div>
+        <div class="stat-label">إجمالي العينات</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff8e1;">⚙️</div>
+      <div>
+        <div class="stat-num" id="stat-processing" style="color:var(--warning)">—</div>
+        <div class="stat-label">جاري العمل بها</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#e8f5e9;">✅</div>
+      <div>
+        <div class="stat-num" id="stat-done" style="color:var(--success)">—</div>
+        <div class="stat-label">تم الانتهاء منها</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-grid">
+
+    <!-- FORM -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">➕ تسجيل عينة جديدة</div>
+        <span class="view-label" id="next-serial-label">الكود التالي: ...</span>
+      </div>
+      <div class="card-body">
+
+        <div class="form-group">
+          <label class="form-label">تابع لمعمل <span>*</span></label>
+          <div class="lab-selector">
+            <button class="lab-option" id="opt-bab" onclick="selectFormLab('bab')">🏥 باب اللوق</button>
+            <button class="lab-option" id="opt-oct" onclick="selectFormLab('october')">🏥 أكتوبر</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">كود العينة (تلقائي)</label>
+          <div class="serial-display" id="serial-preview">...</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">اسم الحالة <span>*</span></label>
+          <input type="text" class="form-control" id="f-name" placeholder="الاسم كاملاً">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">السن</label>
+            <input type="number" class="form-control" id="f-age" placeholder="السن" min="0" max="120">
+          </div>
+          <div class="form-group">
+            <label class="form-label">رقم التليفون</label>
+            <input type="tel" class="form-control" id="f-phone" placeholder="01xxxxxxxxx">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">الطبيب المعالج</label>
+          <input type="text" class="form-control" id="f-doctor" placeholder="د. ...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">نوع العينة <span>*</span></label>
+          <input type="text" class="form-control" id="f-type" placeholder="مثال: نسيج، سائل...">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">تاريخ الاستلام <span>*</span></label>
+          <input type="date" class="form-control" id="f-date">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">💰 المبالغ (جنيه مصري)</label>
+          <div class="money-row">
+            <div>
+              <label class="form-label" style="font-size:11px">المطلوب</label>
+              <input type="number" class="form-control" id="f-total" placeholder="0" min="0" oninput="calcRemaining()">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:11px">المدفوع</label>
+              <input type="number" class="form-control" id="f-paid" placeholder="0" min="0" oninput="calcRemaining()">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:11px">المتبقي</label>
+              <div class="remaining-display" id="f-remaining">0 ج</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="submit-btn" onclick="addSample()">🧪 تسجيل العينة</button>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📋 قائمة العينات</div>
+        <span class="view-label" id="view-label-badge">جميع المعامل</span>
+      </div>
+      <div class="card-body" style="padding:16px">
+
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" placeholder="ابحث بالاسم أو كود العينة..." oninput="renderTable()">
+        </div>
+
+        <div class="filter-tabs">
+          <button class="filter-tab active" onclick="setFilter('all',this)">الكل</button>
+          <button class="filter-tab" onclick="setFilter('processing',this)">⚙️ جاري العمل</button>
+          <button class="filter-tab" onclick="setFilter('ready',this)">✅ منتهية</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>الكود</th>
+                <th>اسم الحالة</th>
+                <th>نوع العينة</th>
+                <th>المعمل</th>
+                <th>التاريخ</th>
+                <th>الحالة</th>
+                <th>المتبقي</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="samples-tbody">
+              <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--muted)">جاري التحميل...</td></tr>
+            </tbody>
+          </table>
+          <div id="empty-state" class="empty-state" style="display:none">
+            <div class="icon">🧪</div>
+            <p>لا توجد عينات مطابقة</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="modal-title">تفاصيل العينة</div>
+        <div style="font-size:11px;opacity:0.8;margin-top:2px" id="modal-serial"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== SUPABASE ====================
+const SUPABASE_URL = 'https://sezojsvdtpckiuyqnlyj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNlem9qc3ZkdHBja2l1eXFubHlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MjM0NzAsImV4cCI6MjA5Mzk5OTQ3MH0.NlMcysB_y74qC9LcstbesU29cyK-d-yiLqLJgJsRB40';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ==================== STATE ====================
+let samples = [];
+let nextSerial = 1;
+let currentView = 'all';
+let currentFilter = 'all';
+let formLab = '';
+
+// ==================== INIT ====================
+async function init() {
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+  await loadSamples();
+  subscribeRealtime();
+  document.getElementById('loading-screen').style.display = 'none';
+}
+
+// ==================== LOAD ====================
+async function loadSamples() {
+  try {
+    const { data, error } = await db
+      .from('samples')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) throw error;
+
+    samples = data || [];
+    calcNextSerial();
+    updateStats();
+    renderTable();
+    setOnline(true);
+  } catch (e) {
+    console.error(e);
+    setOnline(false);
+    showToast('❌ تعذر الاتصال بقاعدة البيانات', '#c62828');
+    document.getElementById('loading-screen').style.display = 'none';
+  }
+}
+
+// ==================== REALTIME ====================
+function subscribeRealtime() {
+  db.channel('samples-channel')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'samples' }, async () => {
+      await loadSamples();
+    })
+    .subscribe((status) => {
+      setOnline(status === 'SUBSCRIBED');
+    });
+}
+
+function setOnline(online) {
+  document.getElementById('sync-dot').className = 'sync-dot' + (online ? '' : ' offline');
+  document.getElementById('sync-text').textContent = online ? 'متصل' : 'غير متصل';
+}
+
+// ==================== SERIAL ====================
+function pad(n) { const s = String(n); return s.length <= 3 ? s.padStart(3, '0') : s; }
+
+function getYearSuffix() {
+  return String(new Date().getFullYear()).slice(-2); // "26" من 2026
+}
+
+function buildSerial(num) {
+  return pad(num) + '-' + getYearSuffix(); // "001-26"
+}
+
+function calcNextSerial() {
+  const currentYear = getYearSuffix();
+  const thisYearSamples = samples.filter(s => s.serial && s.serial.endsWith('-' + currentYear));
+  if (!thisYearSamples.length) {
+    nextSerial = 1;
+  } else {
+    const nums = thisYearSamples.map(s => parseInt(s.serial.split('-')[0]) || 0);
+    nextSerial = Math.max(...nums) + 1;
+  }
+  updateSerialLabel();
+}
+
+function updateSerialLabel() {
+  const year = getYearSuffix();
+  const thisYear = samples.filter(s => s.serial && s.serial.endsWith('-' + year));
+  const maxNum = thisYear.length ? Math.max(...thisYear.map(s => parseInt(s.serial.split('-')[0]) || 0)) : (year === '26' ? 1400 : 0);
+  const next = buildSerial(maxNum + 1);
+  document.getElementById('next-serial-label').textContent = 'الكود التالي: ' + next;
+  document.getElementById('serial-preview').textContent = next;
+}
+
+// ==================== FORM LAB ====================
+function selectFormLab(lab) {
+  formLab = lab;
+  document.getElementById('opt-bab').className = 'lab-option' + (lab === 'bab' ? ' sel-bab' : '');
+  document.getElementById('opt-oct').className = 'lab-option' + (lab === 'october' ? ' sel-oct' : '');
+}
+
+// ==================== CALC ====================
+function calcRemaining() {
+  const t = parseFloat(document.getElementById('f-total').value) || 0;
+  const p = parseFloat(document.getElementById('f-paid').value) || 0;
+  document.getElementById('f-remaining').textContent = Math.max(0, t - p).toLocaleString('ar-EG') + ' ج';
+}
+
+// ==================== ADD SAMPLE ====================
+async function addSample() {
+  const name  = document.getElementById('f-name').value.trim();
+  const type  = document.getElementById('f-type').value.trim();
+  const date  = document.getElementById('f-date').value;
+
+  if (!formLab) {
+    showToast('❗ يرجى اختيار المعمل أولاً', '#c62828');
+    return;
+  }
+
+  if (!name || !type || !date) {
+    showToast('❗ يرجى ملء الاسم ونوع العينة والتاريخ', '#c62828');
+    return;
+  }
+
+  const total     = parseFloat(document.getElementById('f-total').value) || 0;
+  const paid      = parseFloat(document.getElementById('f-paid').value) || 0;
+  const remaining = Math.max(0, total - paid);
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ جاري الحفظ...';
+
+  try {
+    const { error } = await db.from('samples').insert([{
+      name,
+      age:    parseInt(document.getElementById('f-age').value) || null,
+      phone:  document.getElementById('f-phone').value.trim(),
+      doctor: document.getElementById('f-doctor').value.trim(),
+      type, date, total, paid, remaining,
+      status: 'processing',
+      lab: formLab
+    }]);
+
+    if (error) throw error;
+
+    ['f-name','f-age','f-phone','f-doctor','f-total','f-paid','f-type'].forEach(id => document.getElementById(id).value = '');
+    formLab = '';
+    document.getElementById('opt-bab').className = 'lab-option';
+    document.getElementById('opt-oct').className = 'lab-option';
+    document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('f-remaining').textContent = '0 ج';
+
+    showToast('✅ تم تسجيل العينة - معمل ' + (formLab === 'bab' ? 'باب اللوق' : 'أكتوبر'));
+  } catch (e) {
+    console.error(e);
+    showToast('❌ فشل الحفظ، تأكد من الاتصال', '#c62828');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🧪 تسجيل العينة';
+  }
+}
+
+// ==================== UPDATE STATUS ====================
+async function updateStatus(id, status) {
+  try {
+    const { error } = await db.from('samples').update({ status }).eq('id', id);
+    if (error) throw error;
+    const s = samples.find(x => x.id === id);
+    if (s) { s.status = status; updateStats(); }
+  } catch (e) {
+    showToast('❌ فشل تحديث الحالة', '#c62828');
+  }
+}
+
+// ==================== VIEW SWITCH ====================
+function switchView(v) {
+  currentView = v;
+  ['all','bab','october'].forEach(x => document.getElementById('btn-' + x).classList.toggle('active', x === v));
+  const labels = { all: 'جميع المعامل', bab: 'معمل باب اللوق', october: 'معمل أكتوبر' };
+  document.getElementById('view-label-badge').textContent = labels[v];
+  currentFilter = 'all';
+  document.querySelectorAll('.filter-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  renderTable();
+}
+
+// ==================== FILTER ====================
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+// ==================== RENDER TABLE ====================
+function renderTable() {
+  const search = document.getElementById('search-input').value.trim().toLowerCase();
+  const tbody  = document.getElementById('samples-tbody');
+  const empty  = document.getElementById('empty-state');
+
+  let list = [...samples].reverse(); // newest first
+
+  if (currentView !== 'all') list = list.filter(s => s.lab === currentView);
+
+  if (currentFilter === 'processing') list = list.filter(s => s.status === 'waiting' || s.status === 'processing');
+  else if (currentFilter !== 'all')   list = list.filter(s => s.status === currentFilter);
+
+  if (search) {
+    list = list.filter(s =>
+      s.name.toLowerCase().includes(search) ||
+      s.serial.includes(search)
+    );
+  }
+
+  if (!list.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = list.map((s, i) => `
+    <tr>
+      <td style="color:var(--muted);font-size:11px">${i + 1}</td>
+      <td><span class="serial-num">${s.serial}</span></td>
+      <td><strong>${s.name}</strong></td>
+      <td style="font-size:12px">${s.type}</td>
+      <td>${s.lab === 'bab'
+        ? '<span class="badge badge-lab1">🏥 باب اللوق</span>'
+        : '<span class="badge badge-lab2">🏥 أكتوبر</span>'}</td>
+      <td style="color:var(--muted);font-size:12px">${new Date(s.date).toLocaleDateString('ar-EG')}</td>
+      <td>
+        <select class="status-select" onchange="updateStatus(${s.id}, this.value)">
+          <option value="processing" ${s.status === 'processing' || s.status === 'waiting' ? 'selected' : ''}>⚙️ جاري العمل</option>
+          <option value="ready"      ${s.status === 'ready'      ? 'selected' : ''}>✅ منتهية</option>
+        </select>
+      </td>
+      <td style="color:${s.remaining > 0 ? 'var(--danger)' : 'var(--success)'};font-weight:700;font-size:13px">
+        ${s.remaining > 0 ? s.remaining.toLocaleString('ar-EG') + ' ج' : '✓ مسدد'}
+      </td>
+      <td><button class="btn btn-outline btn-sm" onclick="showDetail(${s.id})">📄</button></td>
+    </tr>
+  `).join('');
+}
+
+// ==================== STATS ====================
+function updateStats() {
+  document.getElementById('stat-total').textContent = samples.length;
+  document.getElementById('stat-processing').textContent = samples.filter(s => s.status !== 'ready').length;
+  document.getElementById('stat-done').textContent = samples.filter(s => s.status === 'ready').length;
+}
+
+// ==================== MODAL ====================
+function showDetail(id) {
+  const s = samples.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('modal-title').textContent = s.name;
+  document.getElementById('modal-serial').textContent = 'كود العينة: ' + s.serial;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-item">
+        <label>كود العينة</label>
+        <div class="val" style="font-family:monospace;font-size:22px;color:var(--primary);letter-spacing:3px">${s.serial}</div>
+      </div>
+      <div class="detail-item">
+        <label>المعمل</label>
+        <div class="val">${s.lab === 'bab' ? '🏥 باب اللوق' : '🏥 أكتوبر'}</div>
+      </div>
+      <div class="detail-item">
+        <label>السن</label>
+        <div class="val">${s.age || '—'} ${s.age ? 'سنة' : ''}</div>
+      </div>
+      <div class="detail-item">
+        <label>رقم التليفون</label>
+        <div class="val">${s.phone || '—'}</div>
+      </div>
+      <div class="detail-item">
+        <label>الطبيب المعالج</label>
+        <div class="val">${s.doctor || '—'}</div>
+      </div>
+      <div class="detail-item">
+        <label>نوع العينة</label>
+        <div class="val">${s.type}</div>
+      </div>
+      <div class="detail-item">
+        <label>تاريخ الاستلام</label>
+        <div class="val">${new Date(s.date).toLocaleDateString('ar-EG')}</div>
+      </div>
+    </div>
+    <div class="money-summary">
+      <div class="money-item"><label>المطلوب</label><div class="amount amount-total">${s.total.toLocaleString('ar-EG')} ج</div></div>
+      <div class="money-item"><label>المدفوع</label><div class="amount amount-paid">${s.paid.toLocaleString('ar-EG')} ج</div></div>
+      <div class="money-item"><label>المتبقي</label><div class="amount amount-due">${s.remaining.toLocaleString('ar-EG')} ج</div></div>
+    </div>
+    <div style="margin-top:18px;display:flex;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="closeModal()">إغلاق</button>
+    </div>
+  `;
+  document.getElementById('detail-modal').classList.add('show');
+}
+
+function closeModal() { document.getElementById('detail-modal').classList.remove('show'); }
+document.getElementById('detail-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('detail-modal')) closeModal();
+});
+
+// ==================== TOAST ====================
+function showToast(msg, bg = 'var(--primary)') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.background = bg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ==================== ACTIVE USERS ====================
+// احتفظ بنفس الـ ID حتى لو عمل refresh
+let userId = sessionStorage.getItem('lab_user_id');
+if (!userId) {
+  userId = Math.random().toString(36).substr(2, 9);
+  sessionStorage.setItem('lab_user_id', userId);
+}
+
+async function registerUser() {
+  try {
+    await db.from('active_users').upsert({ id: userId, last_seen: new Date().toISOString() });
+    await cleanOldUsers();
+    await updateActiveCount();
+  } catch(e) {}
+}
+
+async function cleanOldUsers() {
+  try {
+    const cutoff = new Date(Date.now() - 30000).toISOString(); // 30 ثانية
+    await db.from('active_users').delete().lt('last_seen', cutoff);
+  } catch(e) {}
+}
+
+async function updateActiveCount() {
+  try {
+    const { data } = await db.from('active_users').select('id');
+    const count = data ? data.length : 1;
+    document.getElementById('active-count').textContent = count;
+  } catch(e) {}
+}
+
+// تحديث كل 15 ثانية
+setInterval(registerUser, 15000);
+
+// ==================== START ====================
+init();
+registerUser();
+</script>
+</body>
+</html>
